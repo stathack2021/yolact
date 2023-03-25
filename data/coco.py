@@ -1,14 +1,17 @@
 import os
 import os.path as osp
+import random
 import sys
-import torch
-import torch.utils.data as data
-import torch.nn.functional as F
+
 import cv2
 import numpy as np
-from .config import cfg
+import torch
+import torch.nn.functional as F
+import torch.utils.data as data
 from pycocotools import mask as maskUtils
-import random
+
+from .config import cfg
+
 
 def get_label_map():
     if cfg.dataset.label_map is None:
@@ -36,6 +39,7 @@ class COCOAnnotationTransform(object):
         res = []
         for obj in target:
             if 'bbox' in obj:
+                # print(obj)
                 bbox = obj['bbox']
                 label_idx = obj['category_id']
                 if label_idx >= 0:
@@ -123,8 +127,8 @@ class COCODetection(data.Dataset):
         target = [x for x in target if not ('iscrowd' in x and x['iscrowd'])]
         num_crowds = len(crowd)
 
-        for x in crowd:
-            x['category_id'] = -1
+        # for x in crowd:
+        #     x['category_id'] = -1
 
         # This is so we ensure that all crowd annotations are at the end of the array
         target += crowd
@@ -161,7 +165,6 @@ class COCODetection(data.Dataset):
                 # I stored num_crowds in labels so I didn't have to modify the entirety of augmentations
                 num_crowds = labels['num_crowds']
                 labels     = labels['labels']
-                
                 target = np.hstack((boxes, np.expand_dims(labels, axis=1)))
             else:
                 img, _, _, _ = self.transform(img, np.zeros((1, height, width), dtype=np.float), np.array([[0, 0, 1, 1]]),

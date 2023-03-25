@@ -1,6 +1,8 @@
-from backbone import ResNetBackbone, VGGBackbone, ResNetBackboneGN, DarkNetBackbone
 from math import sqrt
+
 import torch
+from backbone import (DarkNetBackbone, ResNetBackbone, ResNetBackboneGN,
+                      VGGBackbone)
 
 # for making bounding boxes pretty
 COLORS = ((244,  67,  54),
@@ -172,7 +174,18 @@ pascal_sbd_dataset = dataset_base.copy({
     'class_names': PASCAL_CLASSES,
 })
 
+pipe_dataset = dataset_base.copy({
+    'name': 'Pipe Dataset',
 
+    'train_images': './data/train',
+    'train_info':   './data/train/instances_default.json',
+
+    'valid_images': './data/train',
+    'valid_info':   './data/train/instances_default.json',
+
+    'has_gt': True,
+    'class_names': ('Outer Pipe', 'Inner Pipe', 'Tag')
+})
 
 
 
@@ -209,7 +222,7 @@ darknet_transform = Config({
 
 backbone_base = Config({
     'name': 'Base Backbone',
-    'path': 'path/to/pretrained/weights',
+    'path': 'weights/resnet50-19c8e357.pth',
     'type': object,
     'args': tuple(),
     'transform': resnet_transform,
@@ -657,8 +670,8 @@ yolact_base_config = coco_base_config.copy({
     'name': 'yolact_base',
 
     # Dataset stuff
-    'dataset': coco2017_dataset,
-    'num_classes': len(coco2017_dataset.class_names) + 1,
+    'dataset': pipe_dataset,
+    'num_classes': len(pipe_dataset.class_names) + 1,
 
     # Image Size
     'max_size': 550,
@@ -729,6 +742,21 @@ yolact_darknet53_config = yolact_base_config.copy({
         'selected_layers': list(range(2, 5)),
         
         'pred_scales': yolact_base_config.backbone.pred_scales,
+        'pred_aspect_ratios': yolact_base_config.backbone.pred_aspect_ratios,
+        'use_pixel_scales': True,
+        'preapply_sqrt': False,
+        'use_square_anchors': True, # This is for backward compatability with a bug
+    }),
+})
+
+yolact_resnet50_im700_config = yolact_base_config.copy({
+    'name': 'yolact_resnet50',
+    'max_size': 700,
+
+    'backbone': resnet50_backbone.copy({
+        'selected_layers': list(range(1, 4)),
+        
+        'pred_scales': [[int(x[0] / yolact_base_config.max_size * 700)] for x in yolact_base_config.backbone.pred_scales],
         'pred_aspect_ratios': yolact_base_config.backbone.pred_aspect_ratios,
         'use_pixel_scales': True,
         'preapply_sqrt': False,
