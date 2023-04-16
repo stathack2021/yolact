@@ -1,16 +1,18 @@
 """ Contains functions used to sanitize and prepare the output of Yolact. """
 
 
+import cv2
+import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-import numpy as np
-import cv2
-
-from data import cfg, mask_type, MEANS, STD, activation_func
-from utils.augmentations import Resize
 from utils import timer
+from utils.augmentations import Resize
+
+from data import MEANS, STD, activation_func, cfg, mask_type
+
 from .box_utils import crop, sanitize_coordinates
+
 
 def postprocess(det_output, w, h, batch_idx=0, interpolation_mode='bilinear',
                 visualize_lincomb=False, crop_masks=True, score_threshold=0):
@@ -60,8 +62,8 @@ def postprocess(det_output, w, h, batch_idx=0, interpolation_mode='bilinear',
         proto_data = dets['proto']
         
         # Test flag, do not upvote
-        if cfg.mask_proto_debug:
-            np.save('scripts/proto.npy', proto_data.cpu().numpy())
+        # if cfg.mask_proto_debug:
+        #     np.save('scripts/proto.npy', proto_data.cpu().numpy())
         
         if visualize_lincomb:
             display_lincomb(proto_data, masks)
