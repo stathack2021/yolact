@@ -795,6 +795,15 @@ yolact_resnet50_pascal_config = yolact_resnet50_config.copy({
     })
 })
 
+yolact_pipe_config = yolact_base_config.copy({
+    'name': 'yolact_pipe',
+
+    'dataset': pipe_dataset,
+    'num_classes': len(pipe_dataset.class_names) + 1,
+    # 'max_iter': 500,
+    'max_size': 1800
+})
+
 # ----------------------- YOLACT++ CONFIGS ----------------------- #
 
 yolact_plus_base_config = yolact_base_config.copy({

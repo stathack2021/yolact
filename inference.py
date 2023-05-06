@@ -1394,11 +1394,13 @@ def print_maps(all_maps):
 
 
 def inference(image):
-    set_cfg("yolact_resnet50_im700_config")
+    set_cfg("yolact_pipe_config")
     net = Yolact()
-    net.load_weights("/workspace/services/segmentation/yolact/weights/pipe.pth")
+    net.load_weights("/workspace/services/segmentation/yolact/weights/yolact_pipe_16007_800360.pth")
     net.eval()
-    frame = torch.from_numpy(image).float()
+    net = net.cuda()
+    image = cv2.resize(image, (800, 800))
+    frame = torch.from_numpy(image).float().cuda().float()
     batch = InfBaseTransform()(frame.unsqueeze(0))
     with torch.no_grad():
         preds = net(batch)
@@ -1408,8 +1410,10 @@ def inference(image):
         )
     idx = t[1].argsort(0, descending=True)[:100]
     masks = t[3][idx]
-    classes, scores, boxes = [x[idx].numpy() for x in t[:3]]
+    classes, scores, boxes = [x[idx].cpu().numpy() for x in t[:3]]
     num_dets_to_consider = classes.shape[0]
+    print(classes.shape[0])
+    num_dets_to_consider = min(200, classes.shape[0])
     for j in range(num_dets_to_consider):
         if scores[j] < 0.3:
             num_dets_to_consider = j
@@ -1469,12 +1473,12 @@ def inference(image):
     # Then draw the stuff that needs to be done on the cpu
     # Note, make sure this is a uint8 tensor or opencv will not anti alias text for whatever reason
     img_numpy = (img_gpu * 255).byte().cpu().numpy()
-    # cv2.imwrite("o.jpg", img_numpy)
+    cv2.imwrite("o.jpg", img_numpy)
     # img_numpy to string
     _, img_numpy = cv2.imencode(".jpg", img_numpy)
     segmentation_image_str = base64.b64encode(img_numpy).decode("utf-8")
 
-    return classes, scores, boxes, masks.numpy(), segmentation_image_str
+    return classes, scores, boxes, masks.cpu().numpy(), segmentation_image_str
 
 
 import torch.nn.functional as F
@@ -1490,8 +1494,8 @@ class InfBaseTransform(torch.nn.Module):
     def __init__(self):
         super().__init__()
 
-        self.mean = torch.Tensor(MEANS).float()[None, :, None, None]
-        self.std = torch.Tensor(STD).float()[None, :, None, None]
+        self.mean = torch.Tensor(MEANS).float().cuda()[None, :, None, None]
+        self.std  = torch.Tensor( STD ).float().cuda()[None, :, None, None]
         self.transform = cfg.backbone.transform
 
     def forward(self, img):
