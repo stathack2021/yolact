@@ -1396,7 +1396,7 @@ def print_maps(all_maps):
 def inference(image):
     set_cfg("yolact_pipe_config")
     net = Yolact()
-    net.load_weights("/workspace/services/segmentation/yolact/weights/yolact_pipe_16007_800360.pth")
+    net.load_weights("/workspace/services/segmentation/yolact/weights/yolact_pipe_re-train5.pth")
     net.eval()
     net = net.cuda()
     image = cv2.resize(image, (800, 800))
@@ -1421,22 +1421,22 @@ def inference(image):
 
     # Quick and dirty lambda for selecting the color for a particular index
     # Also keeps track of a per-gpu color cache for maximum speed
-    def get_color(j, on_gpu=None):
-        global color_cache
-        # color_idx = (classes[j] * 5 if class_color else j * 5) % len(COLORS)
-        color_idx = (j * 5) % len(COLORS)
+    # def get_color(j, on_gpu=None):
+    #     global color_cache
+    #     # color_idx = (classes[j] * 5 if class_color else j * 5) % len(COLORS)
+    #     color_idx = (j * 5) % len(COLORS)
 
-        if on_gpu is not None and color_idx in color_cache[on_gpu]:
-            return color_cache[on_gpu][color_idx]
-        else:
-            color = COLORS[color_idx]
-            # if not undo_transform:
-            #     # The image might come in as RGB or BRG, depending
-            #     color = (color[2], color[1], color[0])
-            # if on_gpu is not None:
-            color = torch.Tensor(color).to(on_gpu).float() / 255.0
-            color_cache[on_gpu][color_idx] = color
-            return color
+    #     if on_gpu is not None and color_idx in color_cache[on_gpu]:
+    #         return color_cache[on_gpu][color_idx]
+    #     else:
+    #         color = COLORS[color_idx]
+    #         # if not undo_transform:
+    #         #     # The image might come in as RGB or BRG, depending
+    #         #     color = (color[2], color[1], color[0])
+    #         # if on_gpu is not None:
+    #         color = torch.Tensor(color).to(on_gpu).float() / 255.0
+    #         color_cache[on_gpu][color_idx] = color
+    #         return color
     img_gpu = frame / 255.0
     # First, draw the masks on the GPU where we can do it really fast
     # Beware: very fast but possibly unintelligible mask-drawing code ahead
@@ -1445,40 +1445,40 @@ def inference(image):
         # After this, mask is of size [num_dets, h, w, 1]
         masks = masks[:num_dets_to_consider, :, :, None]
 
-        # Prepare the RGB images for each mask given their color (size [num_dets, h, w, 1])
-        colors = torch.cat(
-            [
-                get_color(j, on_gpu=img_gpu.device.index).view(1, 1, 1, 3)
-                for j in range(num_dets_to_consider)
-            ],
-            dim=0,
-        )
-        mask_alpha = 0.45
-        masks_color = masks.repeat(1, 1, 1, 3) * colors * mask_alpha
+        # # Prepare the RGB images for each mask given their color (size [num_dets, h, w, 1])
+        # colors = torch.cat(
+        #     [
+        #         get_color(j, on_gpu=img_gpu.device.index).view(1, 1, 1, 3)
+        #         for j in range(num_dets_to_consider)
+        #     ],
+        #     dim=0,
+        # )
+        # mask_alpha = 0.45
+        # masks_color = masks.repeat(1, 1, 1, 3) * colors * mask_alpha
 
-        # This is 1 everywhere except for 1-mask_alpha where the mask is
-        inv_alph_masks = masks * (-mask_alpha) + 1
+        # # This is 1 everywhere except for 1-mask_alpha where the mask is
+        # inv_alph_masks = masks * (-mask_alpha) + 1
 
-        # I did the math for this on pen and paper. This whole block should be equivalent to:
-        #    for j in range(num_dets_to_consider):
-        #        img_gpu = img_gpu * inv_alph_masks[j] + masks_color[j]
-        masks_color_summand = masks_color[0]
-        if num_dets_to_consider > 1:
-            inv_alph_cumul = inv_alph_masks[: (num_dets_to_consider - 1)].cumprod(dim=0)
-            masks_color_cumul = masks_color[1:] * inv_alph_cumul
-            masks_color_summand += masks_color_cumul.sum(dim=0)
+        # # I did the math for this on pen and paper. This whole block should be equivalent to:
+        # #    for j in range(num_dets_to_consider):
+        # #        img_gpu = img_gpu * inv_alph_masks[j] + masks_color[j]
+        # masks_color_summand = masks_color[0]
+        # if num_dets_to_consider > 1:
+        #     inv_alph_cumul = inv_alph_masks[: (num_dets_to_consider - 1)].cumprod(dim=0)
+        #     masks_color_cumul = masks_color[1:] * inv_alph_cumul
+        #     masks_color_summand += masks_color_cumul.sum(dim=0)
 
-        img_gpu = img_gpu * inv_alph_masks.prod(dim=0) + masks_color_summand
+        # img_gpu = img_gpu * inv_alph_masks.prod(dim=0) + masks_color_summand
 
     # Then draw the stuff that needs to be done on the cpu
     # Note, make sure this is a uint8 tensor or opencv will not anti alias text for whatever reason
-    img_numpy = (img_gpu * 255).byte().cpu().numpy()
-    cv2.imwrite("o.jpg", img_numpy)
-    # img_numpy to string
-    _, img_numpy = cv2.imencode(".jpg", img_numpy)
-    segmentation_image_str = base64.b64encode(img_numpy).decode("utf-8")
+    # img_numpy = (img_gpu * 255).byte().cpu().numpy()
+    # cv2.imwrite("o.jpg", img_numpy)
+    # # img_numpy to string
+    # _, img_numpy = cv2.imencode(".jpg", img_numpy)
+    # segmentation_image_str = base64.b64encode(img_numpy).decode("utf-8")
 
-    return classes, scores, boxes, masks.cpu().numpy(), segmentation_image_str
+    return classes, scores, boxes, masks.cpu().numpy()
 
 
 import torch.nn.functional as F
