@@ -434,7 +434,7 @@ coco_base_config = Config({
     'max_iter': 400000,
 
     # The maximum number of detections for evaluation
-    'max_num_detections': 100,
+    'max_num_detections': 250,
 
     # dw' = momentum * dw - lr * (grad + decay * w)
     'lr': 1e-3,
@@ -460,7 +460,7 @@ coco_base_config = Config({
     'eval_mask_branch': True,
 
     # Top_k examples to consider for NMS
-    'nms_top_k': 200,
+    'nms_top_k': 250,
     # Examples with confidence less than this are not considered by NMS
     'nms_conf_thresh': 0.05,
     # Boxes with IoU overlap greater than this threshold will be culled during NMS

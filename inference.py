@@ -1396,10 +1396,9 @@ def print_maps(all_maps):
 def inference(image):
     set_cfg("yolact_pipe_config")
     net = Yolact()
-    net.load_weights("/workspace/services/segmentation/yolact/weights/yolact_pipe_re-train5.pth")
+    net.load_weights("/workspace/services/segmentation/yolact/weights/yolact_pipe_16_220.pth")
     net.eval()
     net = net.cuda()
-    image = cv2.resize(image, (800, 800))
     frame = torch.from_numpy(image).float().cuda().float()
     batch = InfBaseTransform()(frame.unsqueeze(0))
     with torch.no_grad():
@@ -1408,12 +1407,12 @@ def inference(image):
     t  = postprocess(
             preds, w, h, crop_masks=True, score_threshold=0.3
         )
-    idx = t[1].argsort(0, descending=True)[:100]
+    idx = t[1].argsort(0, descending=True)
     masks = t[3][idx]
     classes, scores, boxes = [x[idx].cpu().numpy() for x in t[:3]]
     num_dets_to_consider = classes.shape[0]
     print(classes.shape[0])
-    num_dets_to_consider = min(200, classes.shape[0])
+    num_dets_to_consider = min(250, classes.shape[0])
     for j in range(num_dets_to_consider):
         if scores[j] < 0.3:
             num_dets_to_consider = j
